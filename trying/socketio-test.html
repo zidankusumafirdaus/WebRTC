@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Socket.IO Chat Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, Arial;
+            margin: 2rem;
+        }
+
+        input,
+        button {
+            padding: .5rem;
+            margin: .25rem 0;
+            width: 100%;
+        }
+
+        #log {
+            border: 1px solid #999;
+            padding: .5rem;
+            height: 240px;
+            overflow: auto;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Socket.IO Chat Test</h1>
+    <label>Server URL</label>
+    <input id="url" value="http://localhost:5000" />
+
+    <label>JWT Access Token</label>
+    <input id="token" placeholder="paste JWT here" />
+
+    <label>Conversation ID</label>
+    <input id="conv" placeholder="e.g. 123" />
+
+    <button id="connectBtn">Connect</button>
+    <button id="joinBtn">Join Conversation</button>
+
+    <label>Message</label>
+    <input id="msg" placeholder="Type a message" />
+    <button id="sendBtn">Send</button>
+
+    <h3>Log</h3>
+    <div id="log"></div>
+
+    <script>
+        const log = (o) => {
+            const el = document.getElementById('log');
+            const line = document.createElement('div');
+            line.textContent = (typeof o === 'string') ? o : JSON.stringify(o);
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+        };
+
+        let socket;
+        document.getElementById('connectBtn').onclick = () => {
+            const url = document.getElementById('url').value.trim();
+            const token = document.getElementById('token').value.trim();
+            socket = io(url, {
+                transports: ['websocket'],
+                auth: { token }, // our server reads this on connect
+            });
+            socket.on('connect', () => log('connected'));
+            socket.on('connected', (d) => log(['connected_evt', d]));
+            socket.on('new_message', (msg) => log(['new_message', msg]));
+            socket.on('history_result', (d) => log(['history', d]));
+            socket.on('read_ack', (d) => log(['read_ack', d]));
+            socket.on('error', (e) => log(['error_evt', e]));
+            socket.on('disconnect', (r) => log(['disconnect', r]));
+        };
+
+        document.getElementById('joinBtn').onclick = () => {
+            const conv = parseInt(document.getElementById('conv').value.trim(), 10);
+            socket.emit('join_conversation', { conversation_id: conv });
+            log(['join', conv]);
+        };
+
+        document.getElementById('sendBtn').onclick = () => {
+            const conv = parseInt(document.getElementById('conv').value.trim(), 10);
+            const content = document.getElementById('msg').value;
+            socket.emit('send_message', { conversation_id: conv, content });
+            document.getElementById('msg').value = '';
+        };
+    </script>
+</body>
+
+</html>

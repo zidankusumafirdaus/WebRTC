@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Upload Attachment Test</title>
+</head>
+
+<body>
+    <h1>Upload Attachment</h1>
+    <form id="uploadForm">
+        <label>JWT Token: <input type="text" id="token" placeholder="Bearer token" /></label><br />
+        <label>Conversation ID: <input type="number" id="conversationId" /></label><br />
+        <label>File: <input type="file" id="fileInput" /></label><br />
+        <button type="submit">Upload</button>
+    </form>
+    <pre id="result"></pre>
+    <script>
+        const form = document.getElementById('uploadForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('token').value.trim();
+            const conversationId = document.getElementById('conversationId').value;
+            const file = document.getElementById('fileInput').files[0];
+            if (!file || !conversationId) {
+                alert('Conversation ID and file are required');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('conversation_id', conversationId);
+            fd.append('file', file);
+            const res = await fetch('/api/user/messages/send-attachment', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+                },
+                body: fd,
+            });
+            const json = await res.json();
+            document.getElementById('result').textContent = JSON.stringify(json, null, 2);
+        });
+    </script>
+</body>
+
+</html>
