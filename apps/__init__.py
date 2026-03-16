@@ -10,7 +10,7 @@ def create_app():
 	app.config.from_object(Config)
 
 	# Initialize JWT
-	jwt = JWTManager(app)
+	JWTManager(app)
 
 	# Routers
 	from apps.routes.user_routes import user_bp
