@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields
 
+
 class UserProfileSchema(Schema):
     user_id = fields.Integer()
     username = fields.String()
@@ -11,6 +12,7 @@ class UserProfileSchema(Schema):
     reports_received_count = fields.Integer()
     last_active = fields.String(allow_none=True)
     updated_at = fields.String(allow_none=True)
+
 
 class CounselorProfileSchema(Schema):
     counselor_id = fields.Integer()

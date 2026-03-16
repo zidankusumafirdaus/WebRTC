@@ -15,6 +15,7 @@ def _bootstrap_test_env(monkeypatch):
             del sys.modules[module_name]
 
     import config
+
     importlib.reload(config)
 
 

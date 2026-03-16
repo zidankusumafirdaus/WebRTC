@@ -10,9 +10,9 @@ def get_user_profile_controller():
         profile = get_user_profile(user_id=user_id)
         return jsonify(UserProfileSchema().dump(profile))
     except LookupError as e:
-        return jsonify({'error': str(e)}), 404
+        return jsonify({"error": str(e)}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 def get_counselor_profile_controller():
@@ -21,6 +21,6 @@ def get_counselor_profile_controller():
         profile = get_counselor_profile(counselor_id=counselor_id)
         return jsonify(CounselorProfileSchema().dump(profile))
     except LookupError as e:
-        return jsonify({'error': str(e)}), 404
+        return jsonify({"error": str(e)}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
