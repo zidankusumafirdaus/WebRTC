@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>WebRTC Call Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 16px;
+        }
+
+        label {
+            display: block;
+            margin: 6px 0;
+        }
+
+        input {
+            width: 520px;
+            max-width: 100%;
+        }
+
+        button {
+            margin-right: 8px;
+        }
+
+        video {
+            width: 48%;
+            background: #000;
+            margin-top: 12px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .log {
+            margin-top: 12px;
+            white-space: pre-wrap;
+            font-size: 12px;
+            background: #f7f7f7;
+            padding: 8px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>WebRTC Call Test (Socket.IO signaling)</h2>
+
+    <label>Server URL: <input id="server" value="http://localhost:5000" /></label>
+    <label>JWT Token: <input id="token" placeholder="Bearer token tanpa kata 'Bearer'" /></label>
+    <label>Room / Call ID: <input id="room" placeholder="call_session_id" /></label>
+
+    <button id="connect">Connect & Join</button>
+    <button id="start" disabled>Start / Create Offer</button>
+    <button id="hangup" disabled>Hangup</button>
+
+    <div class="row">
+        <video id="local" autoplay playsinline muted></video>
+        <video id="remote" autoplay playsinline></video>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        let socket;
+        let pc;
+        let localStream;
+        const logEl = document.getElementById('log');
+
+        const serverInput = document.getElementById('server');
+        const tokenInput = document.getElementById('token');
+        const roomInput = document.getElementById('room');
+        const connectBtn = document.getElementById('connect');
+        const startBtn = document.getElementById('start');
+        const hangBtn = document.getElementById('hangup');
+        const localVideo = document.getElementById('local');
+        const remoteVideo = document.getElementById('remote');
+
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        function log(message) {
+            logEl.textContent += message + "\n";
+        }
+
+        async function ensureLocalStream() {
+            if (!localStream) {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                localVideo.srcObject = localStream;
+            }
+        }
+
+        function createPeerConnection() {
+            if (pc) return;
+            pc = new RTCPeerConnection(rtcConfig);
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const room = roomInput.value.trim();
+                    socket.emit('candidate', { room_id: room, candidate: event.candidate });
+                }
+            };
+
+            pc.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            if (localStream) {
+                for (const track of localStream.getTracks()) {
+                    pc.addTrack(track, localStream);
+                }
+            }
+        }
+
+        connectBtn.onclick = () => {
+            const url = serverInput.value.trim();
+            const token = tokenInput.value.trim();
+            const room = roomInput.value.trim();
+            if (!url || !token || !room) {
+                alert('server, token, dan room wajib diisi');
+                return;
+            }
+
+            socket = io(url, { auth: { token } });
+
+            socket.on('connect', () => {
+                log('socket connected: ' + socket.id);
+                socket.emit('join', { room_id: room });
+                startBtn.disabled = false;
+            });
+
+            socket.on('joined', (payload) => log('joined: ' + JSON.stringify(payload)));
+            socket.on('error', (payload) => log('error: ' + JSON.stringify(payload)));
+
+            socket.on('offer', async (payload) => {
+                log('offer received');
+                await ensureLocalStream();
+                createPeerConnection();
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                socket.emit('answer', { room_id: room, sdp: pc.localDescription.toJSON() });
+            });
+
+            socket.on('answer', async (payload) => {
+                log('answer received');
+                if (pc && payload.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                }
+            });
+
+            socket.on('candidate', async (payload) => {
+                if (pc && payload.candidate) {
+                    try {
+                        await pc.addIceCandidate(payload.candidate);
+                    } catch (e) {
+                        log('addIceCandidate failed: ' + e);
+                    }
+                }
+            });
+        };
+
+        startBtn.onclick = async () => {
+            await ensureLocalStream();
+            createPeerConnection();
+            if (localStream && pc.getSenders().length === 0) {
+                for (const track of localStream.getTracks()) {
+                    pc.addTrack(track, localStream);
+                }
+            }
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            const room = roomInput.value.trim();
+            socket.emit('offer', { room_id: room, sdp: pc.localDescription.toJSON() });
+            hangBtn.disabled = false;
+        };
+
+        hangBtn.onclick = () => {
+            if (pc) {
+                pc.getSenders().forEach((sender) => sender.track && sender.track.stop());
+                pc.close();
+                pc = null;
+            }
+            if (localStream) {
+                localStream.getTracks().forEach((t) => t.stop());
+                localStream = null;
+                localVideo.srcObject = null;
+            }
+            if (socket) {
+                socket.disconnect();
+            }
+            startBtn.disabled = true;
+            hangBtn.disabled = true;
+            log('disconnected');
+        };
+    </script>
+</body>
+
+</html>

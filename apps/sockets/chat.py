@@ -33,6 +33,19 @@ def _decode_jwt(token: str):
 
 
 def register_socketio_handlers(socketio):
+    def _require_identity():
+        identity = session.get("identity")
+        role = session.get("role")
+        if not identity or not role:
+            emit("error", {"error": "unauthorized"})
+            return None, None
+        return identity, role
+
+    def _get_room_id(data):
+        if not isinstance(data, dict):
+            return None
+        return data.get("room_id") or data.get("call_id") or data.get("conversation_id")
+
     @socketio.on("connect")
     def on_connect(auth=None):
         token = None
@@ -51,10 +64,8 @@ def register_socketio_handlers(socketio):
 
     @socketio.on("join_conversation")
     def on_join(data):
-        identity = session.get("identity")
-        role = session.get("role")
-        if not identity or not role:
-            emit("error", {"error": "unauthorized"})
+        identity, role = _require_identity()
+        if not identity:
             return
         conversation_id = (
             data.get("conversation_id") if isinstance(data, dict) else None
@@ -80,10 +91,8 @@ def register_socketio_handlers(socketio):
 
     @socketio.on("send_message")
     def on_send_message(data):
-        identity = session.get("identity")
-        role = session.get("role")
-        if not identity or not role:
-            emit("error", {"error": "unauthorized"})
+        identity, role = _require_identity()
+        if not identity:
             return
         identity = int(identity)
         conversation_id = int(data.get("conversation_id"))
@@ -105,10 +114,8 @@ def register_socketio_handlers(socketio):
 
     @socketio.on("mark_read")
     def on_mark_read(data):
-        identity = session.get("identity")
-        role = session.get("role")
-        if not identity or not role:
-            emit("error", {"error": "unauthorized"})
+        identity, role = _require_identity()
+        if not identity:
             return
         identity = int(identity)
         message_ids = data.get("message_ids") if isinstance(data, dict) else None
@@ -120,10 +127,8 @@ def register_socketio_handlers(socketio):
 
     @socketio.on("history")
     def on_history(data):
-        identity = session.get("identity")
-        role = session.get("role")
-        if not identity or not role:
-            emit("error", {"error": "unauthorized"})
+        identity, role = _require_identity()
+        if not identity:
             return
         identity = int(identity)
         conversation_id = int(data.get("conversation_id"))
@@ -139,3 +144,59 @@ def register_socketio_handlers(socketio):
             before_id=int(before_id) if before_id else None,
         )
         emit("history_result", {"items": items})
+
+    @socketio.on("join")
+    def on_join_room(data):
+        identity, role = _require_identity()
+        if not identity:
+            return
+        room_id = _get_room_id(data)
+        if not room_id:
+            emit("error", {"error": "room_id required"})
+            return
+        join_room(str(room_id))
+        emit("joined", {"room_id": room_id, "identity": identity, "role": role})
+
+    @socketio.on("offer")
+    def on_offer(data):
+        identity, role = _require_identity()
+        if not identity:
+            return
+        room_id = _get_room_id(data)
+        sdp = data.get("sdp") if isinstance(data, dict) else None
+        if not room_id or not isinstance(sdp, dict):
+            emit("error", {"error": "room_id and sdp required"})
+            return
+        payload = {"room_id": room_id, "sdp": sdp, "from": identity, "role": role}
+        emit("offer", payload, to=str(room_id), include_self=False)
+
+    @socketio.on("answer")
+    def on_answer(data):
+        identity, role = _require_identity()
+        if not identity:
+            return
+        room_id = _get_room_id(data)
+        sdp = data.get("sdp") if isinstance(data, dict) else None
+        if not room_id or not isinstance(sdp, dict):
+            emit("error", {"error": "room_id and sdp required"})
+            return
+        payload = {"room_id": room_id, "sdp": sdp, "from": identity, "role": role}
+        emit("answer", payload, to=str(room_id), include_self=False)
+
+    @socketio.on("candidate")
+    def on_candidate(data):
+        identity, role = _require_identity()
+        if not identity:
+            return
+        room_id = _get_room_id(data)
+        candidate = data.get("candidate") if isinstance(data, dict) else None
+        if not room_id or not isinstance(candidate, dict):
+            emit("error", {"error": "room_id and candidate required"})
+            return
+        payload = {
+            "room_id": room_id,
+            "candidate": candidate,
+            "from": identity,
+            "role": role,
+        }
+        emit("candidate", payload, to=str(room_id), include_self=False)

@@ -25,6 +25,13 @@ from apps.controllers.chat.attachment_controller import (
     send_attachment_controller,
     get_attachment_controller,
 )
+from apps.controllers.call_controller import (
+    start_call_controller,
+    list_calls_controller,
+    get_call_controller,
+    answer_call_controller,
+    end_call_controller,
+)
 from apps.controllers.profile_controller import (
     get_counselor_profile_controller,
 )
@@ -142,3 +149,39 @@ def send_attachment_route():
 @role_required("counselor")
 def get_attachment_route(message_id: int):
     return get_attachment_controller(message_id)
+
+
+# Call routes
+@counselor_bp.route("/calls", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def list_calls():
+    return list_calls_controller()
+
+
+@counselor_bp.route("/calls/<int:call_session_id>", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def get_call(call_session_id: int):
+    return get_call_controller(call_session_id)
+
+
+@counselor_bp.route("/calls/start", methods=["POST"])
+@jwt_required_custom
+@role_required("counselor")
+def start_call():
+    return start_call_controller()
+
+
+@counselor_bp.route("/calls/<int:call_session_id>/answer", methods=["POST"])
+@jwt_required_custom
+@role_required("counselor")
+def answer_call(call_session_id: int):
+    return answer_call_controller(call_session_id)
+
+
+@counselor_bp.route("/calls/<int:call_session_id>/end", methods=["POST"])
+@jwt_required_custom
+@role_required("counselor")
+def end_call(call_session_id: int):
+    return end_call_controller(call_session_id)
