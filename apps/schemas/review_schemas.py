@@ -8,6 +8,13 @@ class ReviewCreateSchema(Schema):
     session_id = fields.Integer(allow_none=True)
 
 
+class ReviewCreateByCounselorSchema(Schema):
+    target_user_id = fields.Integer(required=True)
+    rating = fields.Integer(required=True, validate=validate.Range(min=1, max=5))
+    comment = fields.String(allow_none=True)
+    session_id = fields.Integer(allow_none=True)
+
+
 class ReviewItemSchema(Schema):
     review_id = fields.Integer()
     session_id = fields.Integer(allow_none=True)

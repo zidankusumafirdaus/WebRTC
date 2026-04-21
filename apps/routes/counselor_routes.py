@@ -38,6 +38,7 @@ from apps.controllers.profile_controller import (
     get_counselor_profile_controller,
 )
 from apps.controllers.review_controller import (
+    create_counselor_review_controller,
     list_counselor_reviews_controller,
     get_counselor_review_detail_controller,
 )
@@ -208,6 +209,13 @@ def end_call(call_session_id: int):
 
 
 # Review routes
+@counselor_bp.route("/reviews", methods=["POST"])
+@jwt_required_custom
+@role_required("counselor")
+def create_review():
+    return create_counselor_review_controller()
+
+
 @counselor_bp.route("/reviews", methods=["GET"])
 @jwt_required_custom
 @role_required("counselor")

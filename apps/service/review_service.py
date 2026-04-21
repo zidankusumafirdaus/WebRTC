@@ -38,6 +38,40 @@ def create_review_by_user(
     return resp.data[0]
 
 
+def create_review_by_counselor(
+    counselor_id: int,
+    target_user_id: int,
+    rating: int,
+    comment: Optional[str],
+    session_id: Optional[int],
+) -> Dict[str, Any]:
+    supabase = get_supabase_client()
+    convo_resp = (
+        supabase.table("conversations")
+        .select("conversation_id")
+        .eq("counselor_id", counselor_id)
+        .eq("user_id", target_user_id)
+        .limit(1)
+        .execute()
+    )
+    if not convo_resp.data:
+        raise PermissionError("forbidden")
+
+    now_iso = datetime.utcnow().isoformat()
+    payload = {
+        "session_id": session_id,
+        "reviewer_user_id": None,
+        "reviewer_counselor_id": counselor_id,
+        "target_user_id": target_user_id,
+        "target_counselor_id": None,
+        "rating": rating,
+        "comment": comment,
+        "created_at": now_iso,
+    }
+    resp = supabase.table("reviews").insert(payload).execute()
+    return resp.data[0]
+
+
 def list_counselor_reviews_for_user(user_id: int) -> List[Dict[str, Any]]:
     supabase = get_supabase_client()
     convo_resp = (

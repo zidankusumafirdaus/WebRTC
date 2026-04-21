@@ -1,5 +1,5 @@
 from datetime import datetime
-from peewee import AutoField, CharField, DateTimeField
+from peewee import AutoField, CharField, DateTimeField, IntegerField, DecimalField
 
 
 class User:
@@ -8,6 +8,8 @@ class User:
     password = CharField(null=True)
     role = CharField(default="user", null=False)
     display_name = CharField(null=True)
+    avg_rating = DecimalField(null=True, max_digits=3, decimal_places=2)
+    rating_count = IntegerField(default=0)
     created_at = DateTimeField(default=datetime.utcnow)
 
     class Meta:
