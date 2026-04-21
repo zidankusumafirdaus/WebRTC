@@ -210,6 +210,21 @@ def get_report_for_user(report_id: int, user_id: int) -> Optional[Dict[str, Any]
     return resp.data if resp else None
 
 
+def get_report_for_counselor(
+    report_id: int, counselor_id: int
+) -> Optional[Dict[str, Any]]:
+    supabase = get_supabase_client()
+    resp = (
+        supabase.table("reports")
+        .select("*")
+        .eq("report_id", report_id)
+        .eq("counselor_id", counselor_id)
+        .single()
+        .execute()
+    )
+    return resp.data if resp else None
+
+
 def get_report_attachment(report_id: int) -> Optional[Dict[str, Any]]:
     supabase = get_supabase_client()
     resp = (

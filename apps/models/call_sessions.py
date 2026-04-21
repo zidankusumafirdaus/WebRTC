@@ -16,6 +16,15 @@ class CallSession:
         backref="initiated_calls",
         column_name="initiator_counselor_id",
     )
+    participant_user = ForeignKeyField(
+        "User", null=True, backref="call_sessions", column_name="participant_user_id"
+    )
+    participant_counselor = ForeignKeyField(
+        "Counselor",
+        null=True,
+        backref="call_sessions",
+        column_name="participant_counselor_id",
+    )
     call_type = CharField(default="audio")
     status = CharField(default="initiated")
     created_at = DateTimeField(default=datetime.utcnow)
@@ -23,6 +32,12 @@ class CallSession:
     ended_at = DateTimeField(null=True)
     ended_reason = CharField(null=True)
     metadata = TextField(null=True)
+    participant_user_status = CharField(null=True)
+    participant_counselor_status = CharField(null=True)
+    participant_user_joined_at = DateTimeField(null=True)
+    participant_counselor_joined_at = DateTimeField(null=True)
+    participant_user_left_at = DateTimeField(null=True)
+    participant_counselor_left_at = DateTimeField(null=True)
 
     class Meta:
         table_name = "call_sessions"
@@ -30,5 +45,8 @@ class CallSession:
         constraints = [
             SQL(
                 "((initiator_user_id IS NOT NULL)::int + (initiator_counselor_id IS NOT NULL)::int) = 1"
-            )
+            ),
+            SQL(
+                "((participant_user_id IS NOT NULL)::int + (participant_counselor_id IS NOT NULL)::int) = 1"
+            ),
         ]

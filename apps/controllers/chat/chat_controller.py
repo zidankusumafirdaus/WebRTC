@@ -10,6 +10,7 @@ from apps.service.chat.chat_service import (
     update_message,
     delete_message,
 )
+from apps.service.counselor_request_service import enforce_schedule_access
 from apps.schemas.chat.chat_schemas import (
     ConversationItemSchema,
     MessageSchema,
@@ -41,9 +42,12 @@ def get_messages_controller(conversation_id: int):
         convo = get_conversation(conversation_id)
         if not convo or not is_participant(convo, actor_id, role):
             return jsonify({"error": "forbidden"}), 403
+        enforce_schedule_access(conversation_id, role)
         items = fetch_history(conversation_id, limit=limit, before_id=before_id)
         payload = MessageSchema(many=True).dump(items)
         return jsonify(payload)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -62,11 +66,14 @@ def send_message_controller():
         convo = get_conversation(conversation_id)
         if not convo or not is_participant(convo, actor_id, role):
             return jsonify({"error": "forbidden"}), 403
+        enforce_schedule_access(conversation_id, role)
         msg = persist_message(
             conversation_id, actor_id, role, content, content_type, reply_to
         )
         payload = MessageSchema().dump(msg)
         return jsonify(payload), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -90,7 +97,7 @@ def mark_read_controller():
                     {
                         "updated": 0,
                         "skipped_ids": skipped_ids,
-                        "reason": "no matching message_status rows — check that the provided message_ids exist and that you are the recipient",
+                        "reason": "no matching messages — check that the provided message_ids exist and that you are the recipient",
                     }
                 ),
                 400,

@@ -9,6 +9,7 @@ from apps.controllers.counselor_request_controller import (
     get_counselors_list,
     create_counselor_request,
     get_user_counselor_requests,
+    cancel_user_request,
 )
 from apps.controllers.chat.chat_controller import (
     list_conversations_controller,
@@ -33,6 +34,11 @@ from apps.controllers.report_controller import (
     list_user_reports_controller,
     get_user_report_detail_controller,
     download_user_report_attachment_controller,
+)
+from apps.controllers.review_controller import (
+    create_user_review_controller,
+    list_user_counselor_reviews_controller,
+    get_user_review_detail_controller,
 )
 from apps.controllers.profile_controller import (
     get_user_profile_controller,
@@ -90,6 +96,13 @@ def my_counselor_requests():
     return get_user_counselor_requests()
 
 
+@user_bp.route("/cancel-counselor-request", methods=["POST"])
+@jwt_required_custom
+@role_required("user")
+def cancel_counselor_request():
+    return cancel_user_request()
+
+
 # Report routes
 @user_bp.route("/reports", methods=["GET"])
 @jwt_required_custom
@@ -110,6 +123,28 @@ def get_report(report_id: int):
 @role_required("user")
 def get_report_attachment(report_id: int):
     return download_user_report_attachment_controller(report_id)
+
+
+# Review routes
+@user_bp.route("/reviews", methods=["POST"])
+@jwt_required_custom
+@role_required("user")
+def create_review():
+    return create_user_review_controller()
+
+
+@user_bp.route("/reviews", methods=["GET"])
+@jwt_required_custom
+@role_required("user")
+def list_reviews():
+    return list_user_counselor_reviews_controller()
+
+
+@user_bp.route("/reviews/<int:review_id>", methods=["GET"])
+@jwt_required_custom
+@role_required("user")
+def get_review(review_id: int):
+    return get_user_review_detail_controller(review_id)
 
 
 # Conversation and messaging routes

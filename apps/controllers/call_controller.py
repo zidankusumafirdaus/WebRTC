@@ -6,7 +6,6 @@ from apps.schemas.call_schemas import (
     CallStartRequestSchema,
     CallEndRequestSchema,
     CallSessionSchema,
-    CallSessionListItemSchema,
 )
 from apps.service.call_service import (
     create_call_session,
@@ -51,7 +50,7 @@ def list_calls_controller():
 
     try:
         items = list_call_sessions(actor_id, role, limit=limit)
-        payload = CallSessionListItemSchema(many=True).dump(items)
+        payload = CallSessionSchema(many=True).dump(items)
         return jsonify(payload), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -7,6 +7,7 @@ from apps.schemas.counselor_request_schemas import (
     RequestCounselorSchema,
     RequestResponseSchema,
     RespondRequestSchema,
+    CancelRequestSchema,
     RequestListSchema,
     ReportSchema,
     UserRequestSummarySchema,
@@ -17,6 +18,7 @@ from apps.service.counselor_request_service import (
     list_pending_requests,
     list_user_requests,
     respond_request,
+    cancel_request,
     get_reports_if_accepted,
 )
 
@@ -38,16 +40,20 @@ def create_counselor_request():
         return jsonify({"error": e.messages}), 400
     counselor_id = int(validated["counselor_id"])
     message = validated.get("message")
+    scheduled_at = validated.get("scheduled_at")
+    duration_minutes = validated.get("duration_minutes")
     try:
-        request_id = create_request(
+        conversation_id = create_request(
             user_id=user_id,
             counselor_id=counselor_id,
             message=message,
             expires_at=datetime.utcnow() + timedelta(hours=24),
+            scheduled_at=scheduled_at,
+            duration_minutes=duration_minutes,
         )
         payload = {
             "message": "Request konsultasi berhasil dikirim.",
-            "request_id": request_id,
+            "conversation_id": conversation_id,
         }
         return jsonify(RequestResponseSchema().dump(payload)), 201
     except Exception as e:
@@ -74,6 +80,28 @@ def get_user_counselor_requests():
         return jsonify({"error": str(e)}), 500
 
 
+def cancel_user_request():
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    try:
+        validated = CancelRequestSchema().load(data)
+    except ValidationError as e:
+        return jsonify({"error": e.messages}), 400
+    try:
+        cancel_request(
+            user_id=user_id,
+            conversation_id=int(validated["conversation_id"]),
+            cancel_reason=validated.get("cancel_reason"),
+        )
+        return jsonify({"message": "Request berhasil dibatalkan."}), 200
+    except LookupError as e:
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 def respond_to_request():
     counselor_id = int(get_jwt_identity())
     data = request.get_json() or {}
@@ -91,7 +119,7 @@ def respond_to_request():
     try:
         conversation_id = respond_request(
             counselor_id=counselor_id,
-            request_id=int(validated["request_id"]),
+            conversation_id=int(validated["conversation_id"]),
             status=validated["status"],
         )
         return (

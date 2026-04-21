@@ -12,6 +12,8 @@ from apps.controllers.counselor_request_controller import (
 )
 from apps.controllers.report_controller import (
     create_report_controller,
+    get_counselor_report_detail_controller,
+    download_counselor_report_attachment_controller,
 )
 from apps.controllers.chat.chat_controller import (
     list_conversations_controller,
@@ -34,6 +36,10 @@ from apps.controllers.call_controller import (
 )
 from apps.controllers.profile_controller import (
     get_counselor_profile_controller,
+)
+from apps.controllers.review_controller import (
+    list_counselor_reviews_controller,
+    get_counselor_review_detail_controller,
 )
 
 counselor_bp = Blueprint("counselor", __name__)
@@ -72,14 +78,14 @@ def get_requests():
 def get_profile():
     return get_counselor_profile_controller()
 
-
+# Request routes
 @counselor_bp.route("/respond-request", methods=["POST"])
 @jwt_required_custom
 @role_required("counselor")
 def respond_request():
     return respond_to_request()
 
-
+# Report routes
 @counselor_bp.route("/user-reports/<int:user_id>", methods=["GET"])
 @jwt_required_custom
 @role_required("counselor")
@@ -92,6 +98,20 @@ def get_reports(user_id):
 @role_required("counselor")
 def create_report():
     return create_report_controller()
+
+
+@counselor_bp.route("/reports/<int:report_id>", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def get_report_detail(report_id: int):
+    return get_counselor_report_detail_controller(report_id)
+
+
+@counselor_bp.route("/reports/<int:report_id>/attachment", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def get_report_attachment(report_id: int):
+    return download_counselor_report_attachment_controller(report_id)
 
 
 # Conversation and messaging routes
@@ -185,3 +205,18 @@ def answer_call(call_session_id: int):
 @role_required("counselor")
 def end_call(call_session_id: int):
     return end_call_controller(call_session_id)
+
+
+# Review routes
+@counselor_bp.route("/reviews", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def list_reviews():
+    return list_counselor_reviews_controller()
+
+
+@counselor_bp.route("/reviews/<int:review_id>", methods=["GET"])
+@jwt_required_custom
+@role_required("counselor")
+def get_review(review_id: int):
+    return get_counselor_review_detail_controller(review_id)

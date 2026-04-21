@@ -26,6 +26,17 @@ class Message:
     )
     content = TextField(null=True)
     content_type = CharField(default="text")
+    recipient_user = ForeignKeyField(
+        "User", null=True, backref="received_messages", column_name="recipient_user_id"
+    )
+    recipient_counselor = ForeignKeyField(
+        "Counselor",
+        null=True,
+        backref="received_messages",
+        column_name="recipient_counselor_id",
+    )
+    status = CharField(null=True)
+    status_updated_at = DateTimeField(null=True)
     created_at = DateTimeField(default=datetime.utcnow)
     edited_at = DateTimeField(null=True)
     reply_to = ForeignKeyField(
@@ -39,5 +50,8 @@ class Message:
         constraints = [
             SQL(
                 "((sender_user_id IS NOT NULL)::int + (sender_counselor_id IS NOT NULL)::int) = 1"
-            )
+            ),
+            SQL(
+                "((recipient_user_id IS NOT NULL)::int + (recipient_counselor_id IS NOT NULL)::int) = 1"
+            ),
         ]

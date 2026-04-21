@@ -14,6 +14,7 @@ from apps.service.report_service import (
     attach_report_file,
     list_reports_for_user,
     get_report_for_user,
+    get_report_for_counselor,
     get_report_attachment,
     download_report_attachment_bytes,
 )
@@ -88,6 +89,45 @@ def download_user_report_attachment_controller(report_id: int):
     user_id = int(get_jwt_identity())
     try:
         report = get_report_for_user(report_id=report_id, user_id=user_id)
+        if not report:
+            return jsonify({"error": "report not found"}), 404
+
+        attachment = get_report_attachment(report_id=report_id)
+        if not attachment:
+            return jsonify({"error": "attachment not found"}), 404
+
+        file_path = attachment.get("file_path")
+        if not file_path:
+            return jsonify({"error": "file not found"}), 404
+
+        file_bytes = download_report_attachment_bytes(file_path)
+        filename = attachment.get("filename") or "report.pdf"
+
+        return send_file(
+            BytesIO(file_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def get_counselor_report_detail_controller(report_id: int):
+    counselor_id = int(get_jwt_identity())
+    try:
+        report = get_report_for_counselor(report_id=report_id, counselor_id=counselor_id)
+        if not report:
+            return jsonify({"error": "report not found"}), 404
+        return jsonify(ReportItemSchema().dump(report))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def download_counselor_report_attachment_controller(report_id: int):
+    counselor_id = int(get_jwt_identity())
+    try:
+        report = get_report_for_counselor(report_id=report_id, counselor_id=counselor_id)
         if not report:
             return jsonify({"error": "report not found"}), 404
 

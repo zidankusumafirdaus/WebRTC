@@ -40,6 +40,9 @@ def persist_message(
     reply_to: Optional[int] = None,
 ) -> Dict[str, Any]:
     now_iso = datetime.utcnow().isoformat()
+    conversation = get_conversation(conversation_id)
+    if not conversation:
+        raise ValueError("conversation not found")
     payload = {
         "conversation_id": conversation_id,
         "content": content,
@@ -47,34 +50,23 @@ def persist_message(
         "created_at": now_iso,
         "reply_to": reply_to,
         "deleted": False,
+        "status": "sent",
+        "status_updated_at": now_iso,
     }
     if role == "user":
         payload["sender_user_id"] = sender_id
         payload["sender_counselor_id"] = None
+        payload["recipient_user_id"] = None
+        payload["recipient_counselor_id"] = conversation["counselor_id"]
     else:
         payload["sender_user_id"] = None
         payload["sender_counselor_id"] = sender_id
+        payload["recipient_user_id"] = conversation["user_id"]
+        payload["recipient_counselor_id"] = None
 
     supabase = get_supabase_client()
     resp = supabase.table("messages").insert(payload).execute()
-    msg = resp.data[0]
-
-    if role == "user":
-        status_payload = {
-            "message_id": msg["message_id"],
-            "recipient_counselor_id": get_conversation(conversation_id)["counselor_id"],
-            "status": "sent",
-            "updated_at": now_iso,
-        }
-    else:
-        status_payload = {
-            "message_id": msg["message_id"],
-            "recipient_user_id": get_conversation(conversation_id)["user_id"],
-            "status": "sent",
-            "updated_at": now_iso,
-        }
-    supabase.table("message_status").insert(status_payload).execute()
-    return msg
+    return resp.data[0]
 
 
 def mark_read(message_ids: List[int], reader_id: int, role: str) -> Dict[str, Any]:
@@ -87,15 +79,15 @@ def mark_read(message_ids: List[int], reader_id: int, role: str) -> Dict[str, An
     for mid in message_ids:
         if role == "user":
             q = (
-                supabase.table("message_status")
-                .update({"status": "read", "updated_at": now_iso})
+                supabase.table("messages")
+                .update({"status": "read", "status_updated_at": now_iso})
                 .eq("message_id", mid)
                 .eq("recipient_user_id", reader_id)
             )
         else:
             q = (
-                supabase.table("message_status")
-                .update({"status": "read", "updated_at": now_iso})
+                supabase.table("messages")
+                .update({"status": "read", "status_updated_at": now_iso})
                 .eq("message_id", mid)
                 .eq("recipient_counselor_id", reader_id)
             )

@@ -11,26 +11,35 @@ class CounselorListSchema(Schema):
 class RequestCounselorSchema(Schema):
     counselor_id = fields.Integer(required=True)
     message = fields.String(allow_none=True)
+    scheduled_at = fields.DateTime(allow_none=True)
+    duration_minutes = fields.Integer(allow_none=True)
 
 
 class RequestResponseSchema(Schema):
     message = fields.String()
-    request_id = fields.Integer()
+    conversation_id = fields.Integer()
+
+
+class CancelRequestSchema(Schema):
+    conversation_id = fields.Integer(required=True)
+    cancel_reason = fields.String(allow_none=True)
 
 
 class RespondRequestSchema(Schema):
-    request_id = fields.Integer(required=True)
+    conversation_id = fields.Integer(required=True)
     status = fields.String(
         required=True, validate=lambda x: x in ["accepted", "rejected"]
     )
 
 
 class RequestListSchema(Schema):
-    request_id = fields.Integer()
+    conversation_id = fields.Integer()
     user_id = fields.Integer()
     message = fields.String()
     requested_at = fields.String()
     expires_at = fields.String()
+    scheduled_at = fields.String(allow_none=True)
+    duration_minutes = fields.Integer(allow_none=True)
 
 
 class ReportSchema(Schema):
@@ -42,10 +51,12 @@ class ReportSchema(Schema):
 
 
 class UserRequestSummarySchema(Schema):
-    request_id = fields.Integer()
+    conversation_id = fields.Integer()
     counselor_id = fields.Integer()
     counselor_name = fields.String(allow_none=True)
     status = fields.String()
     requested_at = fields.String()
     expires_at = fields.String(allow_none=True)
     responded_at = fields.String(allow_none=True)
+    scheduled_at = fields.String(allow_none=True)
+    duration_minutes = fields.Integer(allow_none=True)
